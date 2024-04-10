@@ -1,0 +1,10 @@
+.DS_Store
+*.pt
+.vscode/
+__pycache__/
+Output/
+*.sh
+metrics/
+*.npy
+wandb/
+sbatch/
