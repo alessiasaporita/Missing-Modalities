@@ -39,7 +39,7 @@ def make_arrow(root, dataset_root, single_plot=False, missing_type=None):
             else:
                 plots = labels['plot']
                 
-            genres = labels['genres'] #only the first genre
+            genres = labels['genres'] 
             label = [1 if g in genres else 0 for g in GENRE_CLASS_DICT] 
             data = (binary, plots, label, genres, sample, split)
             #image, plot description, one hot encoding for the genre, genre, number of the image, train/dev/test

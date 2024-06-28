@@ -1,6 +1,6 @@
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument('--dataset', default='food101', type=str, help='Datasets.')
+parser.add_argument('--dataset', default='mmimdb', type=str, help='Datasets.')
 parser.add_argument('--root', default='/work/tesi_asaporita/MissingModalities/', type=str, help='Root of datasets')
 args = parser.parse_args()
 

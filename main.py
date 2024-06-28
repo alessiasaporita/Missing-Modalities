@@ -67,6 +67,92 @@ def set_schedule(args, classifier, train_dataloader):
 
     return optimizer, scheduler
     
+def train_step(images, embeddings, fusion, missing_type, normalization, dataset):
+    with torch.no_grad():
+        image_features = model.encode_image(images) #(batch_size, 512)
+        text_features = model.encode_text(embeddings) #(batch_size, 512)
+    
+    # normalized features
+    if normalization:
+        image_features = image_features / image_features.norm(dim=1, keepdim=True)
+        text_features = text_features / text_features.norm(dim=1, keepdim=True)
+
+    if(fusion == 'average'):
+        if missing_type == 'both':
+            input_model = (image_features + text_features) / 2.0
+        elif missing_type == 'text':
+            input_model = image_features 
+        elif missing_type == 'image':
+            input_model = text_features 
+        else:
+            raise NotImplementedError
+    elif fusion == 'sum':
+        if missing_type == 'both':
+            input_model = image_features+text_features
+        elif missing_type == 'text':
+            input_model = image_features * 2.0
+        elif missing_type == 'image':
+            input_model = text_features * 2.0
+        else:
+            raise NotImplementedError
+    else:
+            raise NotImplementedError
+
+    with torch.cuda.amp.autocast():
+        logits = classifier(input_model) #(batch_size, n_classes) #logits float_16
+        if (dataset == 'mmimdb'):
+            labels=labels.float()
+            loss = F.binary_cross_entropy_with_logits(logits, labels)
+        elif (dataset == 'Hatefull_Memes' or dataset == 'Food101'):
+            labels = labels.long()
+            loss = F.cross_entropy(logits, labels)
+        else:
+            raise NotImplementedError
+    return logits, loss
+
+def val_step(images, embeddings, fusion, missing_type, normalization, dataset):
+    with torch.no_grad():
+        image_features = model.encode_image(images) #(batch_size, 512)
+        text_features = model.encode_text(embeddings) #(batch_size, 512)
+
+        # normalized features
+        if normalization:
+            image_features = image_features / image_features.norm(dim=1, keepdim=True)
+            text_features = text_features / text_features.norm(dim=1, keepdim=True)
+
+        if(fusion == 'average'):
+            if missing_type == 'both':
+                input_model = (image_features + text_features) / 2.0
+            elif missing_type == 'text':
+                input_model = image_features 
+            elif missing_type == 'image':
+                input_model = text_features 
+            else:
+                raise NotImplementedError
+        elif fusion == 'sum':
+            if missing_type == 'both':
+                input_model = image_features+text_features
+            elif missing_type == 'text':
+                input_model = image_features * 2.0
+            elif missing_type == 'image':
+                input_model = text_features * 2.0
+            else:
+                raise NotImplementedError
+        else:
+                raise NotImplementedError
+
+        with torch.cuda.amp.autocast():
+            logits = classifier(input_model) #(batch_size, n_classes)
+            if (dataset == 'mmimdb'):
+                labels=labels.float()
+                loss = F.binary_cross_entropy_with_logits(logits, labels)
+            elif (dataset == 'Hatefull_Memes' or dataset == 'Food101'):
+                labels = labels.long()
+                loss = F.cross_entropy(logits, labels)
+            else:
+                raise NotImplementedError
+
+        return logits, loss
 
 def run(args):
     training_start = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
@@ -95,6 +181,9 @@ def run(args):
     for epoch in range(initial_epoch, args.num_epochs):
         #TRAINING
         classifier.train()
+        f1_metric = F1_Score()
+        accuracy=Accuracy()
+        auroc = AUROC()
         train_bar = tqdm(traindataloader, ncols=150)
         train_running_results = {
             'images_in_epoch': 0, 'accumulated_train_loss': 0}
@@ -103,6 +192,7 @@ def run(args):
             batch_images = batch['image'][0] #(batch_size, 3, 224, 224)
             batch_descriptions = batch['text'] #batch_size
             #batch_embeddings = torch.cat(batch['text_encodings']).to(device, non_blocking=True)
+            labels = torch.tensor(batch['label']).to(device) #(batch_size,) or (bath_size, 23) for mmimdb
             """ 
             #missing_type = 1 = text missing = empty string
             #missing_type = 2 = image missing = image of ones
@@ -115,54 +205,21 @@ def run(args):
             images_in_batch = batch_images.size(0)
             batch_embeddings = clip.tokenize(
                 batch_descriptions, truncate=True).to(device, non_blocking=True) #(batch_size, 77)
+
+            logits, loss = train_step(batch_images, batch_embeddings, args.fusion, args.missing_type, args.normalization, args.dataset)
             
-            with torch.no_grad():
-                image_features = model.encode_image(batch_images) #(batch_size, 512)
-                text_features = model.encode_text(batch_embeddings) #(batch_size, 512)
-            
-            # normalized features
-            if args.normalization:
-                image_features = image_features / image_features.norm(dim=1, keepdim=True)
-                text_features = text_features / text_features.norm(dim=1, keepdim=True)
-
-            if(args.fusion == 'average'):
-                if args.missing_type == 'both':
-                    input_model = (image_features + text_features) / 2.0
-                elif args.missing_type == 'text':
-                    input_model = image_features 
-                elif args.missing_type == 'image':
-                    input_model = text_features 
-                else:
-                    raise NotImplementedError
-            elif args.fusion == 'sum':
-                if args.missing_type == 'both':
-                    input_model = image_features+text_features
-                elif args.missing_type == 'text':
-                    input_model = image_features * 2.0
-                elif args.missing_type == 'image':
-                    input_model = text_features * 2.0
-                else:
-                    raise NotImplementedError
-            else:
-                    raise NotImplementedError
-           
-
-            labels = torch.tensor(batch['label']).to(device) #(batch_size,) or (bath_size, 23) for mmimdb
-
-            with torch.cuda.amp.autocast():
-                logits = classifier(input_model) #(batch_size, n_classes) #logits float_16
-                if (args.dataset == 'mmimdb'):
-                    labels=labels.float()
-                    loss = F.binary_cross_entropy_with_logits(logits, labels)
-                elif (args.dataset == 'Hatefull_Memes' or args.dataset == 'Food101'):
-                    labels = labels.long()
-                    loss = F.cross_entropy(logits, labels)
-                else:
-                    raise NotImplementedError
-
             update_train_running_results(
                     train_running_results, loss, images_in_batch)
-            wandb.log({"train/batch_loss": loss})
+
+            #Metrics
+            if(args.dataset=='mmimdb'):
+                f1_metric.update(logits, labels)
+            elif(args.dataset=='Food101'):
+                accuracy.update(logits, labels)
+            elif args.dataset == 'Hatefull_Memes':
+                auroc.update(logits, labels)
+            else:
+                raise NotImplementedError
 
             loss = loss/args.gc
             loss.backward()
@@ -176,6 +233,19 @@ def run(args):
         train_epoch_loss = float(train_running_results['accumulated_train_loss'] / train_running_results['images_in_epoch'])
         wandb.log({"train/loss": train_epoch_loss, "train/epoch":epoch})
 
+        if(args.dataset=='mmimdb'):
+            F1_Micro, F1_Macro, F1_Samples, F1_Weighted = compute_metric(args, f1_metric)
+            metric = F1_Macro.item()
+        elif(args.dataset=='Food101'):
+            acc = compute_metric(args, accuracy)
+            metric = acc.item()
+        elif args.dataset == 'Hatefull_Memes':
+            aur = compute_metric(args, auroc)
+            metric = aur.item()
+        else:
+            raise NotImplementedError
+        wandb.log({"train/metric": metric, "train/epoch_metric":epoch})
+
         # VALIDATION 
         classifier.eval()
         f1_metric = F1_Score()
@@ -188,90 +258,45 @@ def run(args):
         for idx, batch in enumerate(val_bar):
             batch_images = batch['image'][0] #(batch_size, 3, 224, 224)
             batch_descriptions = batch['text'] #batch_size
-            #batch_embeddings = torch.cat(batch['text_encodings']).to(device, non_blocking=True)
+            labels = torch.tensor(batch['label']).float().to(device) #(batch_size, n_classes)
 
             batch_images = batch_images.to(device, non_blocking=True)
             images_in_batch = batch_images.size(0)
             batch_embeddings = clip.tokenize(
                 batch_descriptions, truncate=True).to(device, non_blocking=True) #(batch_size, 77)
             
-            with torch.no_grad():
-                image_features = model.encode_image(batch_images) #(batch_size, 512)
-                text_features = model.encode_text(batch_embeddings) #(batch_size, 512)
+            logits, loss = val_step(batch_images, batch_embeddings, args.fusion, args.missing_type, args.normalization, args.dataset)
+            update_val_running_results(
+                val_running_results, images_in_batch, loss)
 
-                # normalized features
-                if args.normalization:
-                    image_features = image_features / image_features.norm(dim=1, keepdim=True)
-                    text_features = text_features / text_features.norm(dim=1, keepdim=True)
-
-                if(args.fusion == 'average'):
-                    if args.missing_type == 'both':
-                        input_model = (image_features + text_features) / 2.0
-                    elif args.missing_type == 'text':
-                        input_model = image_features 
-                    elif args.missing_type == 'image':
-                        input_model = text_features 
-                    else:
-                        raise NotImplementedError
-                elif args.fusion == 'sum':
-                    if args.missing_type == 'both':
-                        input_model = image_features+text_features
-                    elif args.missing_type == 'text':
-                        input_model = image_features * 2.0
-                    elif args.missing_type == 'image':
-                        input_model = text_features * 2.0
-                    else:
-                        raise NotImplementedError
-                else:
-                        raise NotImplementedError
-
-                labels = torch.tensor(batch['label']).float().to(device) #(batch_size, n_classes)
-
-                with torch.cuda.amp.autocast():
-                    logits = classifier(input_model) #(batch_size, n_classes)
-                    if (args.dataset == 'mmimdb'):
-                        labels=labels.float()
-                        loss = F.binary_cross_entropy_with_logits(logits, labels)
-                    elif (args.dataset == 'Hatefull_Memes' or args.dataset == 'Food101'):
-                        labels = labels.long()
-                        loss = F.cross_entropy(logits, labels)
-                    else:
-                        raise NotImplementedError
-
-                update_val_running_results(
-                    val_running_results, images_in_batch, loss)
-                wandb.log({"val/batch_loss": loss})
-
-                loss = loss / args.gc
-
-                #Metrics
-                if(args.dataset=='mmimdb'):
-                    f1_metric.update(logits, labels)
-                elif(args.dataset=='Food101'):
-                    accuracy.update(logits, labels)
-                elif args.dataset == 'Hatefull_Memes':
-                    auroc.update(logits, labels)
-                else:
-                    raise NotImplementedError
-            
-        if args.save_training:
+            #Metrics
             if(args.dataset=='mmimdb'):
-                F1_Micro, F1_Macro, F1_Samples, F1_Weighted = compute_metric(args, f1_metric)
-                metric = F1_Macro.item()
+                f1_metric.update(logits, labels)
             elif(args.dataset=='Food101'):
-                acc = compute_metric(args, accuracy)
-                metric = acc.item()
+                accuracy.update(logits, labels)
             elif args.dataset == 'Hatefull_Memes':
-                aur = compute_metric(args, auroc)
-                metric = aur.item()
+                auroc.update(logits, labels)
             else:
                 raise NotImplementedError
+            
+        if(args.dataset=='mmimdb'):
+            F1_Micro, F1_Macro, F1_Samples, F1_Weighted = compute_metric(args, f1_metric)
+            metric = F1_Macro.item()
+        elif(args.dataset=='Food101'):
+            acc = compute_metric(args, accuracy)
+            metric = acc.item()
+        elif args.dataset == 'Hatefull_Memes':
+            aur = compute_metric(args, auroc)
+            metric = aur.item()
+        else:
+            raise NotImplementedError
+        wandb.log({"val/metric": metric, "val/epoch_metric":epoch})
 
-            if metric > best_metric:
-                best_metric = metric
-                save_model(f'classifier_{epoch}', epoch, classifier, optimizer, scheduler, training_start,
-                            training_path)
-                wandb.log({"val/best_metric": best_metric, "val/epoch_best_metric":epoch})
+        if metric > best_metric:
+            best_metric = metric
+            save_model(f'classifier_{epoch}', epoch, classifier, optimizer, scheduler, training_start,
+                        training_path)
+               
                 
         val_epoch_loss = float(val_running_results['accumulated_val_loss'] / val_running_results['images_in_epoch'])
         wandb.log({"val/loss": val_epoch_loss, "val/epoch": epoch})
@@ -308,10 +333,10 @@ if __name__ == '__main__':
 
     os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
     parser = ArgumentParser()
-    parser.add_argument("--num-epochs", default=20, type=int) 
-    parser.add_argument("--input-size", default=768, choices=[512, 768], type=int) 
+    parser.add_argument("--num_epochs", default=20, type=int) 
+    parser.add_argument("--input-size", default=512, choices=[512, 768], type=int) 
     parser.add_argument("--model", choices=["FCModel", "MLP"], default="MLP", type=str)
-    parser.add_argument("--batch-size", default=128, type=int) #256
+    parser.add_argument("--batch_size", default=128, type=int) #256
     parser.add_argument("--learning-rate", type=float, default=1e-2)
     parser.add_argument("--data-root", type=str, default='/work/tesi_asaporita/MissingModalities/datasets')  #/work/tesi_asaporita/MissingModalities/datasets  /work/tesi_asaporita/vpipoli
     parser.add_argument("--data-output-root", type=str, default='/work/tesi_asaporita/MissingModalities')
@@ -321,7 +346,7 @@ if __name__ == '__main__':
     parser.add_argument("--fusion", default='average', choices=['sum', 'average'], type=str) 
     parser.add_argument("--normalization", default=True, type=bool)
     parser.add_argument("--save-training", default=True, type=bool)
-    parser.add_argument("--clip-model", default='RN50x16', type=str, choices=['RN50x16', 'ViT-B/32'])
+    parser.add_argument("--clip-model", default='ViT-B/32', type=str, choices=['RN50x16', 'ViT-B/32'])
 
     parser.add_argument("--warmup-steps", default=0.1, type=float)
     parser.add_argument("--weight-decay", default=2e-2, type=float) #2e-4
@@ -333,7 +358,7 @@ if __name__ == '__main__':
 
 
     # missing modality config
-    parser.add_argument("--missing-ratio", default=0, type=float)
+    parser.add_argument("--missing_ratio", default=0, type=float)
     parser.add_argument("--missing-type", default='both', choices=['text', 'image', 'both'], type=str)
     parser.add_argument("--both-ratio", default=0.5, type=int)
     parser.add_argument("--missing-table-root", default='/work/tesi_asaporita/MissingModalities/datasets/missing_tables/', type=str)
