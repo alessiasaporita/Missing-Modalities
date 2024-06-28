@@ -22,8 +22,6 @@ We use three vision and language datasets: [MM-IMDb](https://github.com/johnarev
 python make_arrow.py --dataset [DATASET] --root [YOUR_DATASET_ROOT]
 ```
 
-### Web dataset
-We create the webdatset by `webdatset.py`, 
 ### Run Demo
 * To run the code:
 `python main.py` 
