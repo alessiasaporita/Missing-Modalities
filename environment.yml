@@ -69,4 +69,5 @@ dependencies:
     - urllib3==2.2.1
     - wandb==0.16.2
     - wcwidth==0.2.13
+    - webdataset==0.2.86
 prefix: /homes/asaporita/.conda/envs/miss_mod

@@ -334,7 +334,7 @@ if __name__ == '__main__':
     os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
     parser = ArgumentParser()
     parser.add_argument("--num_epochs", default=20, type=int) 
-    parser.add_argument("--input-size", default=512, choices=[512, 768], type=int) 
+    parser.add_argument("--input-size", default=768, choices=[512, 768], type=int) 
     parser.add_argument("--model", choices=["FCModel", "MLP"], default="MLP", type=str)
     parser.add_argument("--batch_size", default=128, type=int) #256
     parser.add_argument("--learning-rate", type=float, default=1e-2)
@@ -346,7 +346,7 @@ if __name__ == '__main__':
     parser.add_argument("--fusion", default='average', choices=['sum', 'average'], type=str) 
     parser.add_argument("--normalization", default=True, type=bool)
     parser.add_argument("--save-training", default=True, type=bool)
-    parser.add_argument("--clip-model", default='ViT-B/32', type=str, choices=['RN50x16', 'ViT-B/32'])
+    parser.add_argument("--clip-model", default='RN50x16', type=str, choices=['RN50x16', 'ViT-B/32'])
 
     parser.add_argument("--warmup-steps", default=0.1, type=float)
     parser.add_argument("--weight-decay", default=2e-2, type=float) #2e-4
