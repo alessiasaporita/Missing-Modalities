@@ -8,3 +8,4 @@ metrics/
 *.npy
 wandb/
 sbatch/
+!bash.sh
