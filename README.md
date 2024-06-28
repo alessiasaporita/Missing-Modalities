@@ -15,8 +15,6 @@ environment.yml
 ```
 
 ### Dataset
-
-### Prepare Dataset
 We use three vision and language datasets: [MM-IMDb](https://github.com/johnarevalo/gmu-mmimdb), [UPMC Food-101](https://visiir.isir.upmc.fr/explore), and [Hateful Memes](https://ai.facebook.com/blog/hateful-memes-challenge-and-data-set/). We use `pyarrow` to serialize the datasets, the conversion codes are located in `vilt/utils/write_*.py`. Please see `DATA.md` to organize the datasets, otherwise you may need to revise the `write_*.py` files to meet your dataset path and files. Run the following script to create the pyarrow binary file:
 ```
 python make_arrow.py --dataset [DATASET] --root [YOUR_DATASET_ROOT]
