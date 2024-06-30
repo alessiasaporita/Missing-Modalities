@@ -142,8 +142,8 @@ if __name__ == '__main__':
     parser.add_argument("--model", choices=["FCModel", "MLP"], default="MLP", type=str)
     parser.add_argument("--batch-size", default=128, type=int) #256
     parser.add_argument("--learning-rate", type=float, default=1e-2)
-    parser.add_argument("--data-root", type=str, default='/work/tesi_asaporita/MissingModalities/datasets')
-    parser.add_argument("--root", type=str, default='/work/tesi_asaporita/MissingModalities')
+    parser.add_argument("--data-root", type=str, default='/work/tesi_asaporita/datasets')
+    parser.add_argument("--root", type=str, default='/work/tesi_asaporita/checkpoint')
     parser.add_argument("--data-output-root", type=str, default='./')
     parser.add_argument("--test-ratio", default=None, type=int)
     parser.add_argument("--test-type", default=None, type=str)
@@ -159,7 +159,7 @@ if __name__ == '__main__':
     parser.add_argument("--missing-ratio", default=0.7, type=float)
     parser.add_argument("--missing-type", default='text', choices=['text', 'image', 'both'], type=str)
     parser.add_argument("--both-ratio", default=0.5, type=int)
-    parser.add_argument("--missing-table-root", default='/work/tesi_asaporita/MissingModalities/datasets/missing_tables/', type=str) 
+    parser.add_argument("--missing-table-root", default='/work/tesi_asaporita/datasets/missing_tables/', type=str) 
     parser.add_argument("--simulate-missing", default=False, type=bool)
     
     # Image setting
