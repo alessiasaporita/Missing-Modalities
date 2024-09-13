@@ -22,9 +22,15 @@ python make_arrow.py --dataset [DATASET] --root [YOUR_DATASET_ROOT]
 
 ### Run Demo
 * To run the code:
-`python main_clip.py` 
-`python main_open_clip.py` 
-`python main_meta.py` 
+```
+python main_clip.py
+```
+```
+python main_open_clip.py
+```
+```
+python main_meta.py
+```
 
 
 
