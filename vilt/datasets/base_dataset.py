@@ -2,7 +2,7 @@ import torch
 import io
 import pyarrow as pa
 import os
-
+from torchvision import transforms
 from PIL import Image
 #from vilt.transforms import keys_to_transforms
 import clip
@@ -118,7 +118,6 @@ class BaseDataset(torch.utils.data.Dataset):
 
     def get_text(self, raw_index):
         index, caption_index = self.index_mapper[raw_index]
-
         text = self.all_texts[index][caption_index]
 
         encoding = clip.tokenize(
