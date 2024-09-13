@@ -78,9 +78,8 @@ class My_Meta(nn.Module): #dim=768
             raise NotImplementedError
         
         with torch.no_grad():
-            #features = features.permute(1, 0, 2)  # NLD -> LND
             x = self.encoder(features) 
-            #x = x.permute(1, 0, 2)  # LND -> NLD
+        
 
         #Pooling
         if self.missing_type == 'both':

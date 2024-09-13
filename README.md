@@ -1,5 +1,5 @@
-## CLIP with Missing Modalities for Visual Recognition
-In this code, we analyze CLIP's robustness in multimodal learning for visual recognition when missing-modality occurs either during training or testing in real-world situations. To this end, we freeze the model's parameters and train only the final classifier. 
+## Multimodal Models with Missing Modalities for Visual Recognition
+In this code, we analyze transformer-based models' robustness in multimodal learning for visual recognition when missing-modality occurs either during training or testing in real-world situations. To this end, we freeze the model's parameters and train only the final classifier. 
 This is the code for the multimodal classification task using MM-IMDb, UPMC Food101, and Hateful Memes with image and text modalities. 
 
 
@@ -22,7 +22,9 @@ python make_arrow.py --dataset [DATASET] --root [YOUR_DATASET_ROOT]
 
 ### Run Demo
 * To run the code:
-`python main.py` 
+`python main_clip.py` 
+`python main_open_clip.py` 
+`python main_meta.py` 
 
 
 
