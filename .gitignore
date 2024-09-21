@@ -1,5 +1,6 @@
 .DS_Store
 *.pt
+*.pth
 .vscode/
 __pycache__/
 Output/

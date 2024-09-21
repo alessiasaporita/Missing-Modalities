@@ -1,0 +1,28 @@
+#SBATCH --qos=all_qos_dbg
+
+PRETRAINED VISUAL TOKENIZER
+- ViTForImageClassification.from_pretrained('google/vit-base-patch16-224') --> A ViT Model pretrained on ImageNet-22k with Supervised method
+- timm.create_model('vit_base_patch16_224.mae', pretrained=True) --> A ViT pretrained on ImageNet-1k with Self-Supervised Masked Autoencoder (MAE) method
+- CLIPModel.from_pretrained("openai/clip-vit-base-patch16") --> CLIP base model with a ViT-B/16 Transformer as image encoder pretrained on publicly available image-caption data with contrastive-learning method
+
+CLIP: vit_model.vision_model.embeddings.patch_embedding    
+      vit_model.vision_model.embeddings.position_embedding --> nn.Embedding(image_pos, dim) 
+      vit_model.vision_model.embeddings.class_embedding
+      preprocess_clip = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch16")
+
+ViT-MAE: vit_model.patch_embed.proj                         --> class PatchEmbeddings
+        preprocess_vit_mae = transforms.Compose([
+            transforms.Resize(size=224, interpolation=torchvision.transforms.InterpolationMode.BICUBIC),
+            transforms.CenterCrop(size=(224,224)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),  
+        ])
+
+ViT: vit_model.vit.embeddings.patch_embeddings.projection   --> class PatchEmbeddings
+     vit_model.vit.embeddings.position_embeddings
+     vit_model.vit.embeddings.cls_token
+     preprocess_vit = transforms.Compose([
+            transforms.Resize(size=224),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.5, 0.5,0.5], std=[0.5, 0.5,0.5]),  
+     ])       

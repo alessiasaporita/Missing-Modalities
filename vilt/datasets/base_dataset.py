@@ -4,8 +4,8 @@ import pyarrow as pa
 import os
 from torchvision import transforms
 from PIL import Image
-#from vilt.transforms import keys_to_transforms
 import clip
+from transformers import CLIPProcessor
 
 class BaseDataset(torch.utils.data.Dataset):
     def __init__(
@@ -29,12 +29,10 @@ class BaseDataset(torch.utils.data.Dataset):
         data_dir : where dataset file *.arrow lives; existence should be guaranteed via DataModule.prepare_data
         transform_keys : keys for generating augmented views of images
         text_column_name : pyarrow table column name that has list of strings as elements
-        preprocess: preprocess transform of CLIP
+        preprocess: preprocess transform 
         """
-        #assert len(transform_keys) >= 1
         super().__init__()
 
-        #self.transforms = keys_to_transforms(transform_keys, size=image_size)
         self.text_column_name = text_column_name
         self.names = names
         self.max_text_len = max_text_len
@@ -107,7 +105,10 @@ class BaseDataset(torch.utils.data.Dataset):
 
     def get_image(self, index, image_key="image"):
         image = self.get_raw_image(index, image_key=image_key)
-        image_tensor = [self.preprocess(image)]
+        if isinstance(self.preprocess, CLIPProcessor):
+            image_tensor = [self.preprocess(images=image, return_tensors="pt")['pixel_values'].squeeze(0)]
+        else:
+            image_tensor = [self.preprocess(image)]
         #image_tensor = [tr(image) for tr in self.transforms]
         return {
             "image": image_tensor,

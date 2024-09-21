@@ -28,9 +28,6 @@ class BaseDataLoader():
         self.preprocess_test = preprocess_test
         self.num_workers = args.num_workers
         self.batch_size = args.batch_size
-        #self.eval_batch_size = self.batch_size
-        #tokenizer = args.tokenizer
-        #self.tokenizer = get_pretrained_tokenizer("bert-base-uncased")
 
         self.image_size = args.image_size
         self.max_text_len = args.max_text_len
@@ -92,7 +89,6 @@ class BaseDataLoader():
     def set_train_dataset(self):
         self.train_dataset = self.dataset_cls(
             self.data_dir,
-            #self.train_transform_keys,
             split="train",
             preprocess=self.preprocess_train,
             image_size=self.image_size,
@@ -106,7 +102,6 @@ class BaseDataLoader():
     def set_val_dataset(self):
         self.val_dataset = self.dataset_cls(
             self.data_dir,
-            #self.val_transform_keys,
             split="val",
             preprocess=self.preprocess_val,
             image_size=self.image_size,
@@ -120,7 +115,6 @@ class BaseDataLoader():
         if hasattr(self, "dataset_cls_no_false"):
             self.val_dataset_no_false = self.dataset_cls_no_false(
                 self.data_dir,
-                #self.val_transform_keys,
                 split="val",
                 preprocess=self.preprocess_val,
                 image_size=self.image_size,
@@ -133,7 +127,6 @@ class BaseDataLoader():
     def make_no_false_val_dset(self, image_only=False):
         return self.dataset_cls_no_false(
             self.data_dir,
-            #self.val_transform_keys,
             split="val",
             preprocess=self.preprocess_val,
             image_size=self.image_size,
@@ -163,10 +156,6 @@ class BaseDataLoader():
             self.set_train_dataset() 
             self.set_val_dataset()
             self.set_test_dataset()
-
-            #self.train_dataset.tokenizer = self.tokenizer
-            #self.val_dataset.tokenizer = self.tokenizer
-            #self.test_dataset.tokenizer = self.tokenizer
 
             self.setup_flag = True
 

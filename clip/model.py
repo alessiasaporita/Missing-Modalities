@@ -228,11 +228,11 @@ class VisionTransformer(nn.Module):
         x = x + self.positional_embedding.to(x.dtype)
         x = self.ln_pre(x)
 
-        x = x.permute(1, 0, 2)  # NLD -> LND
+        x = x.permute(1, 0, 2)  # (B, N, D) -> (N, B, D)
         x = self.transformer(x)
-        x = x.permute(1, 0, 2)  # LND -> NLD
+        x = x.permute(1, 0, 2)  # (N, B, D) -> (B, N, D)
 
-        x = self.ln_post(x[:, 0, :])
+        x = self.ln_post(x) #(x[:, 0, :])
 
         if self.proj is not None:
             x = x @ self.proj
@@ -352,8 +352,6 @@ class CLIP(nn.Module):
         # x.shape = [batch_size, n_ctx, transformer.width]
         # take features from the eot embedding (eot_token is the highest number in each sequence)
         x = x[torch.arange(x.shape[0]), text.argmax(dim=-1)] @ self.text_projection
-        #x = x @ self.text_projection
-
         return x
 
     def forward(self, image, text):
